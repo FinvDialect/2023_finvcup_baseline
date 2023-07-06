@@ -1,0 +1,7 @@
+*.ipynb
+exp_*/
+*_sec*
+submit.csv
+data/
+exps/
+*.pyc
