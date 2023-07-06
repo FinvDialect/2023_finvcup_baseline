@@ -66,3 +66,14 @@ python inference.py --model_path exps/model/model_0001.model --test_path data/te
 
 ## Acknowledge
 - We borrowed a lot of code from [ECAPA-TDNN](https://github.com/TaoRuijie/ECAPA-TDNN) for modeling
+
+
+## Authors
+
+以下作者对本项目有贡献（以姓氏排名）：
+- Chen, Yifei
+- Gao, Feng
+- Kou, Kai
+- Ni, Boyi
+- Wang, Shaoming
+- Zhang, Xuan
