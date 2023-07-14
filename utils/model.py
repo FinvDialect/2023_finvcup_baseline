@@ -19,14 +19,12 @@ class SEModule(nn.Module):
             nn.AdaptiveAvgPool1d(1),
             nn.Conv1d(channels, bottleneck, kernel_size=1, padding=0),
             nn.ReLU(),
-            # nn.BatchNorm1d(bottleneck), # I remove this layer
             nn.Conv1d(bottleneck, channels, kernel_size=1, padding=0),
             nn.Sigmoid(),
             )
 
     def forward(self, input):
         x = self.se(input)
-        #print("x:", x.shape)
         return input * x
 
 class Bottle2neck(nn.Module):
@@ -56,11 +54,8 @@ class Bottle2neck(nn.Module):
         out = self.conv1(x)
         out = self.relu(out)
         out = self.bn1(out)
-        
-        #print("res2block:", out.shape)
-        
+
         spx = torch.split(out, self.width, 1)
-        #print("spx:", spx[2].shape)
         for i in range(self.nums):
             if i==0:
                 sp = spx[i]
@@ -79,8 +74,6 @@ class Bottle2neck(nn.Module):
         out = self.conv3(out)
         out = self.relu(out)
         out = self.bn3(out)
-        
-        #print("out:", out.shape)
         out = self.se(out)
         out += residual
         return out 
@@ -156,7 +149,7 @@ class ECAPA_TDNN(nn.Module):
         self.layer1 = Bottle2neck(C, C, kernel_size=3, dilation=2, scale=8)
         self.layer2 = Bottle2neck(C, C, kernel_size=3, dilation=3, scale=8)
         self.layer3 = Bottle2neck(C, C, kernel_size=3, dilation=4, scale=8)
-        # I fixed the shape of the output from MFA layer, that is close to the setting from ECAPA paper.
+
         self.layer4 = nn.Conv1d(3*C, 1536, kernel_size=1)
         self.attention = nn.Sequential(
             nn.Conv1d(4608, 256, kernel_size=1),
@@ -172,23 +165,20 @@ class ECAPA_TDNN(nn.Module):
 
 
     def forward(self, x, aug):
-        #print(type(x))
-        #print("input:", x.shape)
+
         with torch.no_grad():
             x = self.torchfbank(x)+1e-6
-            #print(x.shape)
+
             x = x.log()  
-            #print(type(x))
-            #tmp = torch.mean(x, dim=-1, keepdim=True)
-            #print(tmp.shape)
+
             x = x - torch.mean(x, dim=-1, keepdim=True)
             if aug == True:
                 x = self.specaug(x)
-        #print("fbank:", x.shape)
+
         x = self.conv1(x)
         x = self.relu(x)
         x = self.bn1(x)
-        #print("TDNN:", x.shape)
+
 
         x1 = self.layer1(x)
         x2 = self.layer2(x+x1)
@@ -198,22 +188,15 @@ class ECAPA_TDNN(nn.Module):
         x = self.relu(x)
 
         t = x.size()[-1]
-        #print(x.shape)
         global_x = torch.cat((x,torch.mean(x,dim=2,keepdim=True).repeat(1,1,t), torch.sqrt(torch.var(x,dim=2,keepdim=True).clamp(min=1e-4)).repeat(1,1,t)), dim=1)
         
         w = self.attention(global_x)
-        #print(w)
-        #print("w:", w.shape)
-        #print("global_x:", global_x.shape)
-        #print((x*w).shape)
+
         mu = torch.sum(x * w, dim=2)
         sg = torch.sqrt( ( torch.sum((x**2) * w, dim=2) - mu**2 ).clamp(min=1e-4) )
-        #print("mu:", mu.shape)
-        #print("sg:", sg.shape)
+
         x = torch.cat((mu,sg),1)
-        #print(x.shape)
         x = self.bn5(x)
         x = self.fc6(x)
         x = self.bn6(x)
-        #print(x.shape)    
         return x
